@@ -1,0 +1,13 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "taurus-sam-stack"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-e4e0k7l11zg1"
+s3_prefix = "taurus-sam-stack"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "Environment=\"devl\" ProjectName=\"taurus\" CodeRepositoryS3Bucket=\"subhamay-projects-repository-us-east-1\" LambdaFunctionBaseName=\"demo-layer-lambda\" LambdaLayerBaseName=\"demo-layer\" LambdaExecutionRoleName=\"lambda-execution-role\" LambdaExecutionPolicyName=\"lambda-policy\""
+image_repositories = []
+disable_rollback = true

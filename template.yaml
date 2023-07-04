@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Project Taurus: SAM Template To Lambda Layer and a Lambda Function with the Layer added.
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment Name
+    Default: devl
+  ProjectName:
+    Type: String
+    Description: Project Name
+    Default: taurus
+  CodeRepositoryS3Bucket:
+    Type: String
+    Description: S3 Bucket containing the project repository 
+    Default: subhamay-projects-repository-us-east-1
+  LambdaFunctionBaseName: 
+    Type: String
+    Description: The Base Name Of The Lambda Function.
+    Default: demo-layer-lambda
+  LambdaLayerBaseName: 
+    Type: String
+    Description: The Base Name Of The Lambda Layer.
+    Default: demo-layer
+  LambdaExecutionRoleName:
+    Type: String
+    Description: The Name Of The Lambda Execution Role.
+    Default: lambda-execution-role
+  LambdaExecutionPolicyName:
+    Type: String
+    Description: The Name Of The Lambda Execution Policy.
+    Default: lambda-policy
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.9
+    Handler: taurus_code.lambda_handler
+    Architectures:
+      - "x86_64"
+    Tags:
+      ProjectName: !Ref ProjectName
+      Environment: !Ref Environment
+Resources:
+  ###################################### Lambda Function ###########################################
+  TaurusLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${LambdaExecutionRoleName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub '${ProjectName}-${LambdaExecutionPolicyName}'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Sid: AllowCloudWatchLogStream
+              Effect: Allow
+              Action: 
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ProjectName}-${LambdaFunctionBaseName}-${Environment}-${AWS::Region}:*'
+      Tags:
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key:  Environment
+          Value: !Ref Environment
+  TaurusLambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      CompatibleArchitectures: 
+        - x86_64
+        - arm64
+      CompatibleRuntimes:
+        - python3.7
+        - python3.8
+        - python3.9
+      ContentUri: 
+        Bucket: !Ref CodeRepositoryS3Bucket
+        Key: '0005-taurus/code/python/my_lib.zip'
+        Version: '5pOpzoJSVLlWapR.0aVO91BwZ1EDmNpe'
+      Description: 'Taurus Lambda Layer for Demo'
+      LayerName: !Sub '${ProjectName}-${LambdaLayerBaseName}-${Environment}-${AWS::Region}'
+      LicenseInfo: Subahamay
+      RetentionPolicy: Delete
+  TaurusLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${LambdaFunctionBaseName}-${Environment}-${AWS::Region}'
+      Description: 'Taurus Lambda Layer Demo'
+      Role: !GetAtt TaurusLambdaIAMRole.Arn
+      ReservedConcurrentExecutions: 1
+      Layers:
+           - !Ref TaurusLambdaLayer
+      CodeUri: 
+        Bucket: !Ref CodeRepositoryS3Bucket
+        Key: '0005-taurus/code/python/taurus_code.zip'
+        Version: 'iFxnpiDeRXq9vU8TBjZvcRKFmmtgfa1Z'
+
+Outputs: 
+  TaurusLambdaExecutionRoleArn:
+    Description: "Taurus Lambda Function Execution Role Arn"
+    Value: !GetAtt TaurusLambdaIAMRole.Arn
+  TaurusLambdaLayerArn:
+    Description: "Taurus Lambda Layer Arn"
+    Value: !Ref TaurusLambdaLayer
+  TaurusLambdaFunction:
+    Description: "Taurus Lambda Function Arn"
+    Value: !GetAtt TaurusLambdaFunction.Arn
+ 
